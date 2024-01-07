@@ -121,6 +121,9 @@ void led_loop()
                                ? settings::led::mqtt_on
                                : settings::led::wifi_on_mqtt_off
                          : settings::led::wifi_off;
+    unsigned long since = millis() - advertisementProcessor->lastSuccess();
+    if (since <= 255)
+        new_color = new_color.lerp8(settings::led::ble, 255 - since);
     if (!changed(&led, new_color))
         return;
     led = new_color;

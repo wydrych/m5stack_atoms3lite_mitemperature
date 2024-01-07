@@ -36,6 +36,7 @@ private:
 
     const std::map<uint64_t, device_t> devices;
     PubSubClient *mqtt_client;
+    unsigned long last_success;
 
     static std::map<uint64_t, device_t> convert_devices(const std::vector<settings::ble::device_t> devices)
     {
@@ -215,7 +216,7 @@ private:
 
 public:
     AdvertisementProcessor(const std::vector<settings::ble::device_t> devices, PubSubClient *mqtt_client)
-        : devices(convert_devices(devices)), mqtt_client(mqtt_client) {}
+        : devices(convert_devices(devices)), mqtt_client(mqtt_client), last_success(0) {}
 
     void onResult(NimBLEAdvertisedDevice *adv)
     {
@@ -226,13 +227,7 @@ public:
 
         size_t payloadLength = adv->getPayloadLength();
         const uint8_t *payload = adv->getPayload();
-        char hex[payloadLength * 2 + 1];
-        for (size_t i = 0; i < payloadLength; i++)
-        {
-            sprintf(hex + 2 * i, "%02x", payload[i]);
-        }
-        hex[payloadLength * 2] = 0;
-        M5_LOGI("%s (%d)%s", adv->getAddress().toString().c_str(), payloadLength, hex);
+        // dump(adv->getAddress().toString().c_str(), payload, payloadLength);
 
         // expecting exactly one advertisement data element
         if (payloadLength == 0 || payload[0] != payloadLength - 1)
@@ -269,8 +264,18 @@ public:
         size_t jsonLength = measureJson(doc);
         char json[jsonLength + 1];
         serializeJson(doc, json, jsonLength + 1);
-        M5_LOGI("%s", json);
 
-        mqtt_client->publish(entry->second.mqtt_topic, json);
+        if (mqtt_client->publish(entry->second.mqtt_topic, json))
+        {
+            M5_LOGI("successfully published %s to MQTT topic %s", json, entry->second.mqtt_topic);
+            last_success = millis();
+        }
+        else
+            M5_LOGE("could not publish %s to MQTT topic %s", json);
+    }
+
+    unsigned long lastSuccess() const
+    {
+        return last_success;
     }
 };

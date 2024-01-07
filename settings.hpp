@@ -53,6 +53,7 @@ namespace settings
         const uint32_t wifi_off = 0x800000u;
         const uint32_t wifi_on_mqtt_off = 0xC08000u;
         const uint32_t mqtt_on = 0x008000u;
+        const uint32_t ble = 0x0000ffu;
     }
     namespace ble
     {
