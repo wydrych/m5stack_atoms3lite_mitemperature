@@ -150,7 +150,7 @@ private:
         adv_cust_data_t d;
         if (!decrypt(&d, payload, mac, key))
         {
-            M5_LOGE("could not decrypt the payload");
+            M5_LOGE("could not decrypt the payload for MAC %012llX", mac);
             return false;
         }
         doc[KEY_TEMP] = ((JsonFloat)d.temp) / 100;
@@ -170,7 +170,7 @@ private:
         adv_atc_data_t d;
         if (!decrypt(&d, payload, mac, key))
         {
-            M5_LOGE("could not decrypt the payload");
+            M5_LOGE("could not decrypt the payload for MAC %012llX", mac);
             return false;
         }
         doc[KEY_TEMP] = ((JsonFloat)d.temp) / 2 - 40;
