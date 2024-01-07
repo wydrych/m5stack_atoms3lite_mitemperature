@@ -6,6 +6,14 @@
 
 #include "custom_beacon.h"
 
+#define KEY_SENSOR "sensor"
+#define KEY_TEMP "temperature"
+#define KEY_HUMI "humidity"
+#define KEY_VOLT "voltage"
+#define KEY_BATT "battery"
+#define KEY_TIME "timestamp"
+#define KEY_RSSI "rssi"
+
 class AdvertisementProcessor : public NimBLEAdvertisedDeviceCallbacks
 {
 private:
@@ -36,7 +44,8 @@ private:
                 continue;
             }
             key_t k;
-            if (sscanf(d.second,
+            if (strlen(d.second) != 32 ||
+                sscanf(d.second,
                        "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
                        &k.v[0], &k.v[1], &k.v[2], &k.v[3], &k.v[4], &k.v[5], &k.v[6], &k.v[7],
                        &k.v[8], &k.v[9], &k.v[10], &k.v[11], &k.v[12], &k.v[13], &k.v[14], &k.v[15]) != 16)
@@ -50,22 +59,23 @@ private:
         return m;
     }
 
-    static bool verify_adv_cust_head_t(const padv_cust_head_t head)
+    template <typename T>
+    static bool verify_header(const T *p)
     {
-        return head->uid == BLE_HS_ADV_TYPE_SVC_DATA_UUID16 &&
-               head->UUID == ADV_CUSTOM_UUID16;
+        return p->uid == BLE_HS_ADV_TYPE_SVC_DATA_UUID16 &&
+               p->UUID == ADV_CUSTOM_UUID16;
     }
 
-    static void dump(const char *n, const uint8_t *d, size_t l)
-    {
-        char hex[l * 2 + 1];
-        for (size_t i = 0; i < l; i++)
-        {
-            sprintf(hex + 2 * i, "%02x", d[i]);
-        }
-        hex[l * 2] = 0;
-        M5_LOGD("%s=(%d)%s", n, l, hex);
-    }
+    // static void dump(const char *n, const uint8_t *d, size_t l)
+    // {
+    //     char hex[l * 2 + 1];
+    //     for (size_t i = 0; i < l; i++)
+    //     {
+    //         sprintf(hex + 2 * i, "%02x", d[i]);
+    //     }
+    //     hex[l * 2] = 0;
+    //     M5_LOGD("%s=(%d)%s", n, l, hex);
+    // }
 
     template <typename T_in, typename T_out>
     static bool decrypt(T_out *target, const T_in *adv, /*const padv_cust_head_t head, */ const uint64_t &mac, const uint8_t *key /*, const uint8_t *mic*/)
@@ -87,7 +97,7 @@ private:
         mbedtls_ccm_context ctx;
         mbedtls_ccm_init(&ctx);
 
-        dump("key", key, 16);
+        // dump("key", key, 16);
         int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, key, 16 * 8);
         if (ret)
         {
@@ -117,44 +127,78 @@ private:
         return true;
     }
 
-    static bool decode_adv_cust_enc_t(const padv_cust_enc_t payload, const uint64_t &mac, const uint8_t *key)
+    static bool decode_adv_cust_enc_t(JsonDocument &doc, const padv_cust_enc_t payload, const uint64_t &mac, const uint8_t *key)
     {
-        if (!verify_adv_cust_head_t(&payload->head))
+        if (!verify_header(&payload->head))
             return false;
 
-        M5_LOGD("decoding custom pvvx encrypted format");
+        M5_LOGV("decoding custom pvvx encrypted format");
 
         adv_cust_data_t d;
-        decrypt(&d, payload, mac, key);
-        M5_LOGD("temp %d humi %d bat %d trg %d", d.temp, d.humi, d.bat, d.trg);
+        if (!decrypt(&d, payload, mac, key))
+        {
+            M5_LOGE("could not decrypt the payload");
+            return false;
+        }
+        doc[KEY_TEMP] = ((JsonFloat)d.temp) / 100;
+        doc[KEY_HUMI] = ((JsonFloat)d.humi) / 100;
+        doc[KEY_BATT] = d.bat;
 
         return true;
     }
 
-    static bool decode_adv_atc_enc_t(const padv_atc_enc_t payload, uint64_t mac, const uint8_t *key)
+    static bool decode_adv_atc_enc_t(JsonDocument &doc, const padv_atc_enc_t payload, uint64_t mac, const uint8_t *key)
     {
-        if (!verify_adv_cust_head_t(&payload->head))
+        if (!verify_header(&payload->head))
             return false;
 
-        M5_LOGD("decoding atc1441 encrypted format");
+        M5_LOGV("decoding atc1441 encrypted format");
 
         adv_atc_data_t d;
-        decrypt(&d, payload, mac, key);
-        M5_LOGD("temp %d humi %d bat %d", d.temp, d.humi, d.bat);
+        if (!decrypt(&d, payload, mac, key))
+        {
+            M5_LOGE("could not decrypt the payload");
+            return false;
+        }
+        doc[KEY_TEMP] = ((JsonFloat)d.temp) / 2 - 40;
+        doc[KEY_HUMI] = ((JsonFloat)d.humi) / 2;
+        doc[KEY_BATT] = d.bat & 0x7f;
 
         return true;
     }
 
-    static bool decode_adv_custom_t(const padv_custom_t payload)
+    static bool decode_adv_custom_t(JsonDocument &doc, const padv_custom_t payload)
     {
-        M5_LOGD("decoding custom pvvx format, not implemented yet");
-        return false;
+        if (!verify_header(payload))
+            return false;
+
+        M5_LOGV("decoding custom pvvx format");
+
+        doc[KEY_TEMP] = ((JsonFloat)payload->temperature) / 100;
+        doc[KEY_HUMI] = ((JsonFloat)payload->humidity) / 100;
+        doc[KEY_VOLT] = payload->battery_mv;
+        doc[KEY_BATT] = payload->battery_level;
+
+        return true;
     }
 
-    static bool decode_adv_atc1441_t(const padv_atc1441_t payload)
+    static bool decode_adv_atc1441_t(JsonDocument &doc, const padv_atc1441_t payload)
     {
-        M5_LOGD("decoding atc1441 format, not implemented yet");
-        return false;
+        if (!verify_header(payload))
+            return false;
+
+        M5_LOGV("decoding atc1441 format");
+
+        int16_t temp;
+        uint16_t volt;
+        std::reverse_copy(payload->temperature, payload->temperature + 2, (uint8_t *)&temp);
+        std::reverse_copy(payload->battery_mv, payload->battery_mv + 2, (uint8_t *)&volt);
+        doc[KEY_TEMP] = ((JsonFloat)temp) / 10;
+        doc[KEY_HUMI] = payload->humidity;
+        doc[KEY_VOLT] = volt;
+        doc[KEY_BATT] = payload->battery_level;
+
+        return true;
     }
 
 public:
@@ -182,20 +226,38 @@ public:
             return;
 
         bool success = false;
+        StaticJsonDocument<JSON_OBJECT_SIZE(7)> doc;
+
         switch (payloadLength)
         {
         case sizeof(adv_cust_enc_t):
-            success = decode_adv_cust_enc_t((padv_cust_enc_t)payload, mac, entry->second.v);
+            success = decode_adv_cust_enc_t(doc, (padv_cust_enc_t)payload, mac, entry->second.v);
             break;
         case sizeof(adv_atc_enc_t):
-            success = decode_adv_atc_enc_t((padv_atc_enc_t)payload, mac, entry->second.v);
+            success = decode_adv_atc_enc_t(doc, (padv_atc_enc_t)payload, mac, entry->second.v);
             break;
         case sizeof(adv_custom_t):
-            success = decode_adv_custom_t((padv_custom_t)payload);
+            success = decode_adv_custom_t(doc, (padv_custom_t)payload);
             break;
         case sizeof(adv_atc1441_t):
-            success = decode_adv_atc1441_t((padv_atc1441_t)payload);
+            success = decode_adv_atc1441_t(doc, (padv_atc1441_t)payload);
             break;
         }
+
+        if (!success)
+            return;
+
+        time_t now;
+        time(&now);
+        char sensorname[7];
+        sprintf(sensorname, "%06X", mac & 0xffffffu);
+        doc[KEY_SENSOR] = sensorname;
+        doc[KEY_TIME] = now;
+        doc[KEY_RSSI] = adv->getRSSI();
+
+        size_t jsonLength = measureJson(doc);
+        char json[jsonLength + 1];
+        serializeJson(doc, json, jsonLength + 1);
+        M5_LOGI("%s", json);
     }
 };
