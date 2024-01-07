@@ -19,9 +19,11 @@
 class AdvertisementProcessor : public NimBLEAdvertisedDeviceCallbacks
 {
 private:
-    struct key_t
+    struct device_t
     {
-        uint8_t v[16];
+        uint8_t key[16];
+        char *name;
+        char *mqtt_topic;
     };
 
     /* Encrypted atc/custom nonce */
@@ -32,32 +34,39 @@ private:
         adv_cust_head_t head;
     };
 
-    const std::map<uint64_t, key_t> devices;
+    const std::map<uint64_t, device_t> devices;
     PubSubClient *mqtt_client;
 
-    static std::map<uint64_t, key_t> convert_devices(std::map<const char *, const char *> devices)
+    static std::map<uint64_t, device_t> convert_devices(const std::vector<settings::ble::device_t> devices)
     {
-        std::map<uint64_t, key_t> m;
+        std::map<uint64_t, device_t> m;
         for (auto d : devices)
         {
-            uint64_t mac = NimBLEAddress(d.first);
+            uint64_t mac = NimBLEAddress(d.mac);
             if (mac == 0)
             {
-                M5_LOGE("invalid MAC address: %s", d.first);
+                M5_LOGE("invalid MAC address: %s", d.mac);
                 continue;
             }
-            key_t k;
-            if (strlen(d.second) != 32 ||
-                sscanf(d.second,
-                       "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
-                       &k.v[0], &k.v[1], &k.v[2], &k.v[3], &k.v[4], &k.v[5], &k.v[6], &k.v[7],
-                       &k.v[8], &k.v[9], &k.v[10], &k.v[11], &k.v[12], &k.v[13], &k.v[14], &k.v[15]) != 16)
-
+            device_t device;
+            if (d.key != nullptr)
             {
-                M5_LOGI("invalid decryption key, setting to zeros: %s", d.second);
-                k = key_t();
+                uint8_t key[16];
+                if (strlen(d.key) == 32 &&
+                    sscanf(d.key,
+                           "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
+                           &key[0], &key[1], &key[2], &key[3], &key[4], &key[5], &key[6], &key[7],
+                           &key[8], &key[9], &key[10], &key[11], &key[12], &key[13], &key[14], &key[15]) == 16)
+                    memcpy(device.key, key, 16);
+                else
+                    M5_LOGI("invalid decryption key: %s", d.key);
             }
-            m[mac] = k;
+            if (d.name != nullptr)
+                asprintf(&device.name, "%s", d.name);
+            else
+                asprintf(&device.name, "%06X", mac & 0xffffffu);
+            asprintf(&device.mqtt_topic, "%s/%s", settings::mqtt::topic_prefix, device.name);
+            m[mac] = device;
         }
         return m;
     }
@@ -205,7 +214,7 @@ private:
     }
 
 public:
-    AdvertisementProcessor(std::map<const char *, const char *> devices, PubSubClient *mqtt_client)
+    AdvertisementProcessor(const std::vector<settings::ble::device_t> devices, PubSubClient *mqtt_client)
         : devices(convert_devices(devices)), mqtt_client(mqtt_client) {}
 
     void onResult(NimBLEAdvertisedDevice *adv)
@@ -235,10 +244,10 @@ public:
         switch (payloadLength)
         {
         case sizeof(adv_cust_enc_t):
-            success = decode_adv_cust_enc_t(doc, (padv_cust_enc_t)payload, mac, entry->second.v);
+            success = decode_adv_cust_enc_t(doc, (padv_cust_enc_t)payload, mac, entry->second.key);
             break;
         case sizeof(adv_atc_enc_t):
-            success = decode_adv_atc_enc_t(doc, (padv_atc_enc_t)payload, mac, entry->second.v);
+            success = decode_adv_atc_enc_t(doc, (padv_atc_enc_t)payload, mac, entry->second.key);
             break;
         case sizeof(adv_custom_t):
             success = decode_adv_custom_t(doc, (padv_custom_t)payload);
@@ -253,9 +262,7 @@ public:
 
         time_t now;
         time(&now);
-        char sensorname[7];
-        sprintf(sensorname, "%06X", mac & 0xffffffu);
-        doc[KEY_SENSOR] = sensorname;
+        doc[KEY_SENSOR] = entry->second.name;
         doc[KEY_TIME] = now;
         doc[KEY_RSSI] = adv->getRSSI();
 
@@ -264,9 +271,6 @@ public:
         serializeJson(doc, json, jsonLength + 1);
         M5_LOGI("%s", json);
 
-        char topic[strlen(settings::mqtt::topic_prefix) + strlen(sensorname) + 2];
-        sprintf(topic, "%s/%s", settings::mqtt::topic_prefix, sensorname);
-
-        mqtt_client->publish(topic, json);
+        mqtt_client->publish(entry->second.mqtt_topic, json);
     }
 };

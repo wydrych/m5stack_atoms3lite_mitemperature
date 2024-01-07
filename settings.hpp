@@ -23,7 +23,9 @@
 #define TZ UTC
 #endif
 #ifndef DEVICES
-#define DEVICES {}
+#define DEVICES \
+    {           \
+    }
 #endif
 
 namespace settings
@@ -54,6 +56,12 @@ namespace settings
     }
     namespace ble
     {
-        const std::map<const char *, const char *> devices = DEVICES;
+        struct device_t
+        {
+            const char *mac;
+            const char *key;
+            const char *name;
+        };
+        const std::vector<device_t> devices = DEVICES;
     }
 }
