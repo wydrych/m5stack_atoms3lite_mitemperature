@@ -16,6 +16,9 @@
 #ifndef MQTT_PORT
 #define MQTT_PORT 1883
 #endif
+#ifndef MQTT_TOPIC_PREFIX
+#define MQTT_TOPIC_PREFIX "m5stack_atoms3lite_mitemperature"
+#endif
 #ifndef TZ
 #define TZ UTC
 #endif
@@ -40,6 +43,7 @@ namespace settings
     {
         const char *const server = MQTT_SERVER;
         const uint16_t port = MQTT_PORT;
+        const char *const topic_prefix = MQTT_TOPIC_PREFIX;
         const float reconnect = 3.0;
     }
     namespace led

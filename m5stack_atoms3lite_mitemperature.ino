@@ -15,7 +15,7 @@ CRGB led;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
-AdvertisementProcessor advertisementProcessor(settings::ble::devices);
+AdvertisementProcessor advertisementProcessor(settings::ble::devices, &mqtt_client);
 
 bool wifi_status;
 bool mqtt_status;

@@ -2,9 +2,11 @@
 
 #include <M5Unified.h>
 #include <NimBLEDevice.h>
+#include <PubSubClient.h>
 #include <mbedtls/ccm.h>
 
 #include "custom_beacon.h"
+#include "settings.hpp"
 
 #define KEY_SENSOR "sensor"
 #define KEY_TEMP "temperature"
@@ -31,6 +33,7 @@ private:
     };
 
     const std::map<uint64_t, key_t> devices;
+    PubSubClient *mqtt_client;
 
     static std::map<uint64_t, key_t> convert_devices(std::map<const char *, const char *> devices)
     {
@@ -202,7 +205,8 @@ private:
     }
 
 public:
-    AdvertisementProcessor(std::map<const char *, const char *> devices) : devices(convert_devices(devices)) {}
+    AdvertisementProcessor(std::map<const char *, const char *> devices, PubSubClient *mqtt_client)
+        : devices(convert_devices(devices)), mqtt_client(mqtt_client) {}
 
     void onResult(NimBLEAdvertisedDevice *adv)
     {
@@ -259,5 +263,10 @@ public:
         char json[jsonLength + 1];
         serializeJson(doc, json, jsonLength + 1);
         M5_LOGI("%s", json);
+
+        char topic[strlen(settings::mqtt::topic_prefix) + strlen(sensorname) + 2];
+        sprintf(topic, "%s/%s", settings::mqtt::topic_prefix, sensorname);
+
+        mqtt_client->publish(topic, json);
     }
 };
