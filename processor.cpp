@@ -7,7 +7,7 @@
 
 #include "processor.hpp"
 
-std::map<uint64_t, AdvertisementProcessor::device_t> AdvertisementProcessor::convert_devices(const std::vector<settings::ble::device_t> devices) const
+std::map<uint64_t, AdvertisementProcessor::device_t> AdvertisementProcessor::convert_devices(const std::vector<Settings::Ble::device_t> devices) const
 {
     std::map<uint64_t, device_t> m;
     for (auto d : devices)
@@ -35,7 +35,7 @@ std::map<uint64_t, AdvertisementProcessor::device_t> AdvertisementProcessor::con
             asprintf(&device.name, "%s", d.name);
         else
             asprintf(&device.name, "%06X", mac & 0xffffffu);
-        asprintf(&device.mqtt_topic, "%s/%s", settings::mqtt::topic_prefix, device.name);
+        asprintf(&device.mqtt_topic, "%s/%s", settings.mqtt.topic_prefix, device.name);
         m[mac] = device;
     }
     return m;
@@ -166,7 +166,7 @@ bool AdvertisementProcessor::decode_adv_atc1441_t(JsonDocument &doc, const padv_
     return true;
 }
 
-AdvertisementProcessor::AdvertisementProcessor(const std::vector<settings::ble::device_t> devices, PubSubClient *mqtt_client)
+AdvertisementProcessor::AdvertisementProcessor(const std::vector<Settings::Ble::device_t> devices, PubSubClient *mqtt_client)
     : devices(convert_devices(devices)), mqtt_client(mqtt_client), last_success(0) {}
 
 void AdvertisementProcessor::onResult(NimBLEAdvertisedDevice *adv)

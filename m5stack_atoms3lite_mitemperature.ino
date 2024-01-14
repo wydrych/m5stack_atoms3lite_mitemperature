@@ -11,6 +11,8 @@
 #include "processor.hpp"
 #include "settings.hpp"
 
+Settings settings;
+
 CRGB led;
 
 WiFiClient wifi_client;
@@ -31,7 +33,7 @@ inline bool changed(T *storage, T val)
 
 void setup()
 {
-    esp_task_wdt_init(settings::watchdog_timer, true);
+    esp_task_wdt_init(settings.watchdog_timer, true);
     esp_task_wdt_add(NULL);
 
     M5.Log.setEnableColor(m5::log_target_serial, false);
@@ -42,13 +44,13 @@ void setup()
 
     FastLED.addLeds<NEOPIXEL, 35>(&led, 1);
 
-    WiFi.begin(settings::wifi::ssid, settings::wifi::password);
+    WiFi.begin(settings.wifi.ssid, settings.wifi.password);
 
-    mqtt_client.setServer(settings::mqtt::server, settings::mqtt::port);
+    mqtt_client.setServer(settings.mqtt.server, settings.mqtt.port);
 
-    configTzTime(settings::time::tz, settings::time::ntpServer);
+    configTzTime(settings.time.tz, settings.time.ntpServer);
 
-    advertisementProcessor = new AdvertisementProcessor(settings::ble::devices, &mqtt_client);
+    advertisementProcessor = new AdvertisementProcessor(settings.ble.devices, &mqtt_client);
 
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DATA_DEVICE);
     NimBLEDevice::init("");
@@ -94,11 +96,12 @@ void mqtt_loop()
     {
         static unsigned long last_reconnect;
         unsigned long now = millis();
-        if (last_reconnect == 0 || now - last_reconnect >= settings::mqtt::reconnect * 1000)
+        if (last_reconnect == 0 || now - last_reconnect >= settings.mqtt.reconnect_ms)
         {
             last_reconnect = now;
             M5_LOGI("Trying to connect MQTT");
-            mqtt_client.connect((String("M5Stack AtomS3 Lite ") + WiFi.macAddress()).c_str());
+            mqtt_client.connect(settings.mqtt.client_name,
+                                settings.mqtt.user, settings.mqtt.password);
         }
     }
     if (!wifi_status && mqtt_status)
@@ -118,12 +121,12 @@ void led_loop()
 {
     CRGB new_color = wifi_status
                          ? mqtt_status
-                               ? settings::led::mqtt_on
-                               : settings::led::wifi_on_mqtt_off
-                         : settings::led::wifi_off;
+                               ? settings.led.mqtt_on
+                               : settings.led.wifi_on_mqtt_off
+                         : settings.led.wifi_off;
     unsigned long since = millis() - advertisementProcessor->lastSuccess();
     if (since <= 255)
-        new_color = new_color.lerp8(settings::led::ble, 255 - since);
+        new_color = new_color.lerp8(settings.led.ble, 255 - since);
     if (!changed(&led, new_color))
         return;
     led = new_color;

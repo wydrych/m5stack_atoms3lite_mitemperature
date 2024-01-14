@@ -36,7 +36,7 @@ private:
     PubSubClient *const mqtt_client;
     unsigned long last_success;
 
-    std::map<uint64_t, device_t> convert_devices(const std::vector<settings::ble::device_t> devices) const;
+    std::map<uint64_t, device_t> convert_devices(const std::vector<Settings::Ble::device_t> devices) const;
 
     template <typename T>
     bool verify_header(const T *p) const;
@@ -53,7 +53,7 @@ private:
     bool decode_adv_atc1441_t(JsonDocument &doc, const padv_atc1441_t payload) const;
 
 public:
-    AdvertisementProcessor(const std::vector<settings::ble::device_t> devices, PubSubClient *mqtt_client);
+    AdvertisementProcessor(const std::vector<Settings::Ble::device_t> devices, PubSubClient *mqtt_client);
 
     void onResult(NimBLEAdvertisedDevice *adv);
 

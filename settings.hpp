@@ -1,68 +1,73 @@
 #pragma once
 
-#if __has_include("settings-private.hpp")
-#include "settings-private.hpp"
-#endif
+#include <vector>
 
-#ifndef WIFI_SSID
-#define WIFI_SSID NULL
-#endif
-#ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD NULL
-#endif
-#ifndef MQTT_SERVER
-#define MQTT_SERVER NULL
-#endif
-#ifndef MQTT_PORT
-#define MQTT_PORT 1883
-#endif
-#ifndef MQTT_TOPIC_PREFIX
-#define MQTT_TOPIC_PREFIX "m5stack_atoms3lite_mitemperature"
-#endif
-#ifndef TZ
-#define TZ UTC
-#endif
-#ifndef DEVICES
-#define DEVICES \
-    {           \
-    }
-#endif
-
-namespace settings
+class Settings
 {
-    const uint32_t watchdog_timer = 60;
-    namespace time
+public:
+    const uint32_t watchdog_timer;
+
+    class Time
     {
-        const char *const ntpServer = "pool.ntp.org";
-        const char *const tz = TZ;
-    }
-    namespace wifi
+    public:
+        const char *const ntpServer;
+        const char *const tz;
+        Time();
+    };
+    const Time time;
+
+    class Wifi
     {
-        const char *const ssid = WIFI_SSID;
-        const char *const password = WIFI_PASSWORD;
-    }
-    namespace mqtt
+    public:
+        const char *const ssid;
+        const char *const password;
+        Wifi();
+    };
+    const Wifi wifi;
+
+    class Mqtt
     {
-        const char *const server = MQTT_SERVER;
-        const uint16_t port = MQTT_PORT;
-        const char *const topic_prefix = MQTT_TOPIC_PREFIX;
-        const float reconnect = 3.0;
-    }
-    namespace led
+    private:
+        char *getClientName(const char *prefix) const;
+
+    public:
+        const char *const server;
+        const uint16_t port;
+        const char *const user;
+        const char *const password;
+        const char *const client_name;
+        const char *const topic_prefix;
+        const unsigned int reconnect_ms;
+        Mqtt();
+    };
+    const Mqtt mqtt;
+
+    class Led
     {
-        const uint32_t wifi_off = 0x800000u;
-        const uint32_t wifi_on_mqtt_off = 0xC08000u;
-        const uint32_t mqtt_on = 0x008000u;
-        const uint32_t ble = 0x0000ffu;
-    }
-    namespace ble
+    public:
+        const uint32_t wifi_off;
+        const uint32_t wifi_on_mqtt_off;
+        const uint32_t mqtt_on;
+        const uint32_t ble;
+        Led();
+    };
+    const Led led;
+
+    class Ble
     {
+    public:
         struct device_t
         {
             const char *mac;
             const char *key;
             const char *name;
         };
-        const std::vector<device_t> devices = DEVICES;
-    }
-}
+        const std::vector<device_t> devices;
+        Ble();
+    };
+    const Ble ble;
+
+    Settings();
+};
+
+extern Settings settings;
