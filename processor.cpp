@@ -7,40 +7,6 @@
 
 #include "processor.hpp"
 
-std::map<uint64_t, AdvertisementProcessor::device_t> AdvertisementProcessor::convert_devices(const std::vector<Settings::Ble::device_t> devices) const
-{
-    std::map<uint64_t, device_t> m;
-    for (auto d : devices)
-    {
-        uint64_t mac = NimBLEAddress(d.mac);
-        if (mac == 0)
-        {
-            M5_LOGE("invalid MAC address: %s", d.mac);
-            continue;
-        }
-        device_t device;
-        if (d.key != nullptr)
-        {
-            uint8_t key[16];
-            if (strlen(d.key) == 32 &&
-                sscanf(d.key,
-                       "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
-                       &key[0], &key[1], &key[2], &key[3], &key[4], &key[5], &key[6], &key[7],
-                       &key[8], &key[9], &key[10], &key[11], &key[12], &key[13], &key[14], &key[15]) == 16)
-                memcpy(device.key, key, 16);
-            else
-                M5_LOGI("invalid decryption key: %s", d.key);
-        }
-        if (d.name != nullptr)
-            asprintf(&device.name, "%s", d.name);
-        else
-            asprintf(&device.name, "%06X", mac & 0xffffffu);
-        asprintf(&device.mqtt_topic, "%s/%s", settings.mqtt.topic_prefix, device.name);
-        m[mac] = device;
-    }
-    return m;
-}
-
 template <typename T>
 bool AdvertisementProcessor::verify_header(const T *p) const
 {
@@ -49,7 +15,7 @@ bool AdvertisementProcessor::verify_header(const T *p) const
 }
 
 template <typename T_in, typename T_out>
-bool AdvertisementProcessor::decrypt(T_out *target, const T_in *adv, /*const padv_cust_head_t head, */ const uint64_t &mac, const uint8_t *key /*, const uint8_t *mic*/) const
+bool AdvertisementProcessor::decrypt(T_out *target, const T_in *adv, const uint64_t &mac, const uint8_t *key) const
 {
     enc_beacon_nonce_t cbn;
 
@@ -94,6 +60,12 @@ bool AdvertisementProcessor::decrypt(T_out *target, const T_in *adv, /*const pad
 
 bool AdvertisementProcessor::decode_adv_cust_enc_t(JsonDocument &doc, const padv_cust_enc_t payload, const uint64_t &mac, const uint8_t *key) const
 {
+    if (!key)
+    {
+        M5_LOGE("no key configured to decrypt the payload for MAC %012llX", mac);
+        return false;
+    }
+
     if (!verify_header(&payload->head))
         return false;
 
@@ -114,6 +86,12 @@ bool AdvertisementProcessor::decode_adv_cust_enc_t(JsonDocument &doc, const padv
 
 bool AdvertisementProcessor::decode_adv_atc_enc_t(JsonDocument &doc, const padv_atc_enc_t payload, uint64_t mac, const uint8_t *key) const
 {
+    if (!key)
+    {
+        M5_LOGE("no key configured to decrypt the payload for MAC %012llX", mac);
+        return false;
+    }
+
     if (!verify_header(&payload->head))
         return false;
 
@@ -166,14 +144,14 @@ bool AdvertisementProcessor::decode_adv_atc1441_t(JsonDocument &doc, const padv_
     return true;
 }
 
-AdvertisementProcessor::AdvertisementProcessor(const std::vector<Settings::Ble::device_t> devices, PubSubClient *mqtt_client)
-    : devices(convert_devices(devices)), mqtt_client(mqtt_client), last_success(0) {}
+AdvertisementProcessor::AdvertisementProcessor(PubSubClient *mqtt_client)
+    : mqtt_client(mqtt_client), last_success(0) {}
 
 void AdvertisementProcessor::onResult(NimBLEAdvertisedDevice *adv)
 {
     uint64_t mac = adv->getAddress();
-    auto entry = devices.find(mac);
-    if (entry == devices.end())
+    auto entry = settings.ble.devices.find(mac);
+    if (entry == settings.ble.devices.end())
         return;
 
     size_t payloadLength = adv->getPayloadLength();
@@ -221,7 +199,7 @@ void AdvertisementProcessor::onResult(NimBLEAdvertisedDevice *adv)
         last_success = millis();
     }
     else
-        M5_LOGE("could not publish %s to MQTT topic %s", json);
+        M5_LOGE("could not publish %s to MQTT topic %s", json, entry->second.mqtt_topic);
 }
 
 unsigned long AdvertisementProcessor::lastSuccess() const

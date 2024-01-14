@@ -50,7 +50,7 @@ void setup()
 
     configTzTime(settings.time.tz, settings.time.ntpServer);
 
-    advertisementProcessor = new AdvertisementProcessor(settings.ble.devices, &mqtt_client);
+    advertisementProcessor = new AdvertisementProcessor(&mqtt_client);
 
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DATA_DEVICE);
     NimBLEDevice::init("");

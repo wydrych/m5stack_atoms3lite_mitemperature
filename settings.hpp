@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <vector>
 
 class Settings
@@ -56,13 +57,25 @@ public:
     class Ble
     {
     public:
-        struct device_t
+        struct device_def_t
         {
             const char *mac;
             const char *key;
             const char *name;
         };
-        const std::vector<device_t> devices;
+
+        struct device_t
+        {
+            const uint8_t *key;     // 16B or nullptr if not set
+            const char *name;       // last 3 bytes of MAC if not defined in settings
+            const char *mqtt_topic; // topic prefix + "/" + name
+        };
+
+    private:
+        std::map<uint64_t, device_t> convert_devices(const std::vector<device_def_t> devices) const;
+
+    public:
+        const std::map<uint64_t, device_t> devices;
         Ble();
     };
     const Ble ble;

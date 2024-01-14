@@ -4,6 +4,9 @@
 #include "settings-private.hpp"
 #endif
 
+#include <cstring>
+#include <M5Unified.h>
+#include <NimBLEAddress.h>
 #include <esp_mac.h>
 
 #include "settings.hpp"
@@ -78,4 +81,43 @@ Settings::Led::Led()
       ble(0x0000ffu) {}
 
 Settings::Ble::Ble()
-    : devices(DEVICES) {}
+    : devices(convert_devices(DEVICES)) {}
+
+std::map<uint64_t, Settings::Ble::device_t> Settings::Ble::convert_devices(const std::vector<Settings::Ble::device_def_t> devices) const
+{
+    std::map<uint64_t, device_t> m;
+    for (auto d : devices)
+    {
+        uint64_t mac = NimBLEAddress(d.mac);
+        if (mac == 0)
+        {
+            M5_LOGE("invalid MAC address: %s", d.mac);
+            continue;
+        }
+        uint8_t *device_key = nullptr;
+        char *device_name,
+            *device_mqtt_topic;
+        if (d.key != nullptr)
+        {
+            uint8_t key[16];
+            if (d.key != nullptr &&
+                std::strlen(d.key) == 32 &&
+                sscanf(d.key,
+                       "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
+                       &key[0], &key[1], &key[2], &key[3], &key[4], &key[5], &key[6], &key[7],
+                       &key[8], &key[9], &key[10], &key[11], &key[12], &key[13], &key[14], &key[15]) == 16)
+                memcpy(device_key = (uint8_t *) malloc(16), key, 16);
+            else
+                M5_LOGI("invalid decryption key: %s", d.key);
+        }
+        if (d.name != nullptr)
+            asprintf(&device_name, "%s", d.name);
+        else
+            asprintf(&device_name, "%06X", mac & 0xffffffu);
+        asprintf(&device_mqtt_topic, "%s/%s", settings.mqtt.topic_prefix, device_name);
+
+        device_t device{device_key, device_name, device_mqtt_topic};
+        m[mac] = device;
+    }
+    return m;
+}

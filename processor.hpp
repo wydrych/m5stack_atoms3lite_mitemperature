@@ -17,13 +17,6 @@ private:
     static constexpr char *key_time = "timestamp";
     static constexpr char *key_rssi = "rssi";
 
-    struct device_t
-    {
-        uint8_t key[16];
-        char *name;
-        char *mqtt_topic;
-    };
-
     /* Encrypted atc/custom nonce */
     /* from from pvvx/ATC_MiThermometer/src/custom_beacon.c */
     struct __attribute__((packed)) enc_beacon_nonce_t
@@ -32,11 +25,8 @@ private:
         adv_cust_head_t head;
     };
 
-    const std::map<uint64_t, device_t> devices;
     PubSubClient *const mqtt_client;
     unsigned long last_success;
-
-    std::map<uint64_t, device_t> convert_devices(const std::vector<Settings::Ble::device_t> devices) const;
 
     template <typename T>
     bool verify_header(const T *p) const;
@@ -53,7 +43,7 @@ private:
     bool decode_adv_atc1441_t(JsonDocument &doc, const padv_atc1441_t payload) const;
 
 public:
-    AdvertisementProcessor(const std::vector<Settings::Ble::device_t> devices, PubSubClient *mqtt_client);
+    AdvertisementProcessor(PubSubClient *mqtt_client);
 
     void onResult(NimBLEAdvertisedDevice *adv);
 
