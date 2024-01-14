@@ -43,7 +43,7 @@ private:
     bool decode_adv_atc1441_t(JsonDocument &doc, const padv_atc1441_t payload) const;
 
 public:
-    AdvertisementProcessor(PubSubClient *mqtt_client);
+    AdvertisementProcessor(PubSubClient &mqtt_client);
 
     void onResult(NimBLEAdvertisedDevice *adv);
 

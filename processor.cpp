@@ -144,8 +144,8 @@ bool AdvertisementProcessor::decode_adv_atc1441_t(JsonDocument &doc, const padv_
     return true;
 }
 
-AdvertisementProcessor::AdvertisementProcessor(PubSubClient *mqtt_client)
-    : mqtt_client(mqtt_client), last_success(0) {}
+AdvertisementProcessor::AdvertisementProcessor(PubSubClient &mqtt_client)
+    : mqtt_client(&mqtt_client), last_success(0) {}
 
 void AdvertisementProcessor::onResult(NimBLEAdvertisedDevice *adv)
 {

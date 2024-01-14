@@ -17,7 +17,7 @@ CRGB led;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
-AdvertisementProcessor *advertisementProcessor;
+AdvertisementProcessor advertisementProcessor(mqtt_client);
 
 bool wifi_status;
 bool mqtt_status;
@@ -50,12 +50,10 @@ void setup()
 
     configTzTime(settings.time.tz, settings.time.ntpServer);
 
-    advertisementProcessor = new AdvertisementProcessor(&mqtt_client);
-
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DATA_DEVICE);
     NimBLEDevice::init("");
     NimBLEScan *pBLEScan = NimBLEDevice::getScan();
-    pBLEScan->setAdvertisedDeviceCallbacks(advertisementProcessor, false);
+    pBLEScan->setAdvertisedDeviceCallbacks(&advertisementProcessor, false);
     pBLEScan->setMaxResults(0); // do not store the scan results, use callback only.
 }
 
@@ -124,7 +122,7 @@ void led_loop()
                                ? settings.led.mqtt_on
                                : settings.led.wifi_on_mqtt_off
                          : settings.led.wifi_off;
-    unsigned long since = millis() - advertisementProcessor->lastSuccess();
+    unsigned long since = millis() - advertisementProcessor.lastSuccess();
     if (since <= 255)
         new_color = new_color.lerp8(settings.led.ble, 255 - since);
     if (!changed(&led, new_color))
