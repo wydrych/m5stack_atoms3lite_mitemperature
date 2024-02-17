@@ -9,13 +9,13 @@ class AdvertisementProcessor : public NimBLEAdvertisedDeviceCallbacks
 {
 private:
     static const size_t json_capacity = JSON_OBJECT_SIZE(7); // max size
-    static constexpr char *key_sensor = "sensor";
-    static constexpr char *key_temp = "temperature";
-    static constexpr char *key_humi = "humidity";
-    static constexpr char *key_volt = "voltage";
-    static constexpr char *key_batt = "battery";
-    static constexpr char *key_time = "timestamp";
-    static constexpr char *key_rssi = "rssi";
+    const char *key_sensor = "sensor";
+    const char *key_temp = "temperature";
+    const char *key_humi = "humidity";
+    const char *key_volt = "voltage";
+    const char *key_batt = "battery";
+    const char *key_time = "timestamp";
+    const char *key_rssi = "rssi";
 
     /* Encrypted atc/custom nonce */
     /* from from pvvx/ATC_MiThermometer/src/custom_beacon.c */

@@ -189,12 +189,13 @@ void AdvertisementProcessor::onResult(NimBLEAdvertisedDevice *adv)
     doc[key_time] = now;
     doc[key_rssi] = adv->getRSSI();
 
-    size_t jsonLength = measureJson(doc);
-    char json[jsonLength + 1];
-    serializeJson(doc, json, jsonLength + 1);
+    char json[512];
+    size_t json_length = serializeJson(doc, json);
 
-    if (mqtt_client->publish(entry->second.mqtt_topic, json))
+    if (mqtt_client->beginPublish(entry->second.mqtt_topic, json_length, false))
     {
+        mqtt_client->write((uint8_t *)json, json_length);
+        mqtt_client->endPublish();
         M5_LOGI("successfully published %s to MQTT topic %s", json, entry->second.mqtt_topic);
         last_success = millis();
     }
