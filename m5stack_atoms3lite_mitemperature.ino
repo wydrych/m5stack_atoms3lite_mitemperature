@@ -48,7 +48,7 @@ void setup()
 
     mqtt_client.setServer(settings.mqtt.server, settings.mqtt.port);
 
-    configTzTime(settings.time.tz, settings.time.ntpServer);
+    configTzTime("GMT0", settings.time.ntpServer);
 
     NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DATA_DEVICE);
     NimBLEDevice::init("");

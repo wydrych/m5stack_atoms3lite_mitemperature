@@ -35,9 +35,6 @@
 #ifndef MQTT_TOPIC_PREFIX
 #define MQTT_TOPIC_PREFIX "m5stack_atoms3lite_mitemperature"
 #endif
-#ifndef TZ
-#define TZ UTC
-#endif
 #ifndef DEVICES
 #define DEVICES \
     {           \
@@ -48,8 +45,7 @@ Settings::Settings()
     : watchdog_timer(60) {}
 
 Settings::Time::Time()
-    : ntpServer("pool.ntp.org"),
-      tz(TZ) {}
+    : ntpServer("pool.ntp.org") {}
 
 Settings::Wifi::Wifi()
     : ssid(WIFI_SSID),

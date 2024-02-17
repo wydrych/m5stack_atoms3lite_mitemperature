@@ -12,7 +12,6 @@ public:
     {
     public:
         const char *const ntpServer;
-        const char *const tz;
         Time();
     };
     const Time time;
