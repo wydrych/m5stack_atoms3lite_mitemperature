@@ -29,6 +29,7 @@ public:
     class Mqtt
     {
     private:
+        char *getStatusTopicName(const char *prefix) const;
         char *getClientName(const char *prefix) const;
 
     public:
@@ -38,6 +39,8 @@ public:
         const char *const password;
         const char *const client_name;
         const char *const topic_prefix;
+        const unsigned int status_interval_ms;
+        const char *const status_topic_name;
         const unsigned int reconnect_ms;
         Mqtt();
     };

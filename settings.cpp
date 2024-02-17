@@ -62,6 +62,8 @@ Settings::Mqtt::Mqtt()
       password(MQTT_PASSWORD),
       client_name(getClientName(MQTT_CLIENT_NAME_PREFIX)),
       topic_prefix(MQTT_TOPIC_PREFIX),
+      status_interval_ms(60000),
+      status_topic_name(getStatusTopicName(MQTT_TOPIC_PREFIX)),
       reconnect_ms(3000) {}
 
 char *Settings::Mqtt::getClientName(const char *prefix) const
@@ -71,6 +73,13 @@ char *Settings::Mqtt::getClientName(const char *prefix) const
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
     asprintf(&name, "%s %02X:%02X:%02X:%02X:%02X:%02X",
              prefix, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return name;
+}
+
+char *Settings::Mqtt::getStatusTopicName(const char *prefix) const
+{
+    char *name;
+    asprintf(&name, "%s/status", prefix);
     return name;
 }
 
@@ -106,7 +115,7 @@ std::map<uint64_t, Settings::Ble::device_t> Settings::Ble::convert_devices(const
                        "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
                        &key[0], &key[1], &key[2], &key[3], &key[4], &key[5], &key[6], &key[7],
                        &key[8], &key[9], &key[10], &key[11], &key[12], &key[13], &key[14], &key[15]) == 16)
-                memcpy(device_key = (uint8_t *) malloc(16), key, 16);
+                memcpy(device_key = (uint8_t *)malloc(16), key, 16);
             else
                 M5_LOGI("invalid decryption key: %s", d.key);
         }
