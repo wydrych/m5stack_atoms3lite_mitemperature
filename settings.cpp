@@ -1,5 +1,3 @@
-#pragma once
-
 #if __has_include("settings-private.hpp")
 #include "settings-private.hpp"
 #endif

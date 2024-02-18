@@ -1,5 +1,3 @@
-#pragma once
-
 #include <M5Unified.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
