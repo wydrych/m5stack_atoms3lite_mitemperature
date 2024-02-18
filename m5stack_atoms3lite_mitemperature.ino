@@ -33,7 +33,7 @@ inline bool changed(T *storage, T val)
 
 void setup()
 {
-    esp_task_wdt_init(settings.watchdog_timer, true);
+    esp_task_wdt_init(settings.watchdog_timer_s, true);
     esp_task_wdt_add(NULL);
 
     M5.Log.setEnableColor(m5::log_target_serial, false);

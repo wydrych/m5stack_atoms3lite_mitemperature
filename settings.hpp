@@ -6,7 +6,7 @@
 class Settings
 {
 public:
-    const uint32_t watchdog_timer;
+    const uint32_t watchdog_timer_s;
 
     class Time
     {

@@ -40,7 +40,7 @@
 #endif
 
 Settings::Settings()
-    : watchdog_timer(60) {}
+    : watchdog_timer_s(60) {}
 
 Settings::Time::Time()
     : ntpServer("pool.ntp.org") {}
