@@ -57,7 +57,7 @@ stats to the `status` topic:
 m5stack_atoms3lite_mitemperature/978C7B {"temperature":27.12,"humidity":43.83,"voltage":2976,"battery":100,"sensor":"978C7B","timestamp":1708205031,"rssi":-38}
 m5stack_atoms3lite_mitemperature/FFC13F {"temperature":22.94,"humidity":66.74,"battery":64,"sensor":"FFC13F","timestamp":1708205032,"rssi":-71}
 m5stack_atoms3lite_mitemperature/bathroom {"temperature":21.48,"humidity":71.16,"battery":65,"sensor":"bathroom","timestamp":1708205041,"rssi":-56}
-m5stack_atoms3lite_mitemperature/status {"uptime_ms":180000,"heap_8bit_total_free_bytes":202756,"heap_8bit_total_allocated_bytes":128368,"heap_8bit_largest_free_block":192500,"heap_8bit_minimum_free_bytes":196340,"heap_8bit_allocated_blocks":366,"heap_8bit_free_blocks":5,"heap_8bit_total_blocks":371}
+m5stack_atoms3lite_mitemperature/status {"uptime":180,"heap_8bit_total_free_bytes":202756,"heap_8bit_total_allocated_bytes":128368,"heap_8bit_largest_free_block":192500,"heap_8bit_minimum_free_bytes":196340,"heap_8bit_allocated_blocks":366,"heap_8bit_free_blocks":5,"heap_8bit_total_blocks":371}
 ```
 
 [ESPHomeXiaomiBle]: https://esphome.io/components/sensor/xiaomi_ble.html#lywsd03mmc

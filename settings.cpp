@@ -56,9 +56,9 @@ Settings::Mqtt::Mqtt()
       password(MQTT_PASSWORD),
       client_name(getClientName(MQTT_CLIENT_NAME_PREFIX)),
       topic_prefix(MQTT_TOPIC_PREFIX),
-      status_interval_ms(60000),
+      status_interval(60),
       status_topic_name(getStatusTopicName(MQTT_TOPIC_PREFIX)),
-      reconnect_ms(3000) {}
+      reconnect(3) {}
 
 char *Settings::Mqtt::getClientName(const char *prefix) const
 {

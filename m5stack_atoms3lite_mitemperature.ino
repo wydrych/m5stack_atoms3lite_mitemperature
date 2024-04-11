@@ -94,7 +94,7 @@ void mqtt_loop()
     {
         static unsigned long last_reconnect;
         unsigned long now = millis();
-        if (last_reconnect == 0 || now - last_reconnect >= settings.mqtt.reconnect_ms)
+        if (last_reconnect == 0 || now - last_reconnect >= settings.mqtt.reconnect * 1000)
         {
             last_reconnect = now;
             M5_LOGI("Trying to connect MQTT");
@@ -143,16 +143,17 @@ void ble_scan_loop()
 
 void status_loop()
 {
-    static unsigned long next = 0;
-    if (millis() < next)
+    static int64_t next = 0;
+    if (esp_timer_get_time() < next)
         return;
-    next += settings.mqtt.status_interval_ms;
+    next += settings.mqtt.status_interval * 1000000;
 
     multi_heap_info_t info;
-    heap_caps_get_info(&info, MALLOC_CAP_8BIT);
-
     StaticJsonDocument<JSON_OBJECT_SIZE(8)> doc;
-    doc["uptime_ms"] = millis();
+
+    doc["uptime"] = esp_timer_get_time() / 1000000;
+
+    heap_caps_get_info(&info, MALLOC_CAP_8BIT);
     doc["heap_8bit_total_free_bytes"] = info.total_free_bytes;
     doc["heap_8bit_total_allocated_bytes"] = info.total_allocated_bytes;
     doc["heap_8bit_largest_free_block"] = info.largest_free_block;
